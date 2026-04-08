@@ -23,6 +23,8 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../../firebase/config';
 import { COLORS, SCREEN_TOP_SPACE, SHADOW } from '../../constants/theme';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
+import { getPrimaryImageUrl, normalizeImageUrls } from '../../utils/productImages';
 import { formatCurrency } from '../../utils/formatters';
 
 const CATEGORIES = ['Birthday', 'Wedding', 'Custom', 'Pastries'];
@@ -34,6 +36,7 @@ const initialForm = {
   price: '',
   description: '',
   imageUrl: '',
+  imageUrlsText: '',
   sizes: ['Medium'],
   inStock: true,
 };
@@ -121,17 +124,27 @@ export default function AddEditProductScreen() {
 
       await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(storageRef);
-      setForm(current => ({ ...current, imageUrl: downloadUrl }));
-    } catch (error) {
-      const details = [
-        error?.code,
-        error?.message,
-        error?.serverResponse,
-      ]
-        .filter(Boolean)
-        .join('\n\n');
+      setForm(current => {
+        const imageUrls = normalizeImageUrls({
+          imageUrl: downloadUrl,
+          imageUrls: current.imageUrlsText.split('\n'),
+        });
 
-      Alert.alert('Image upload failed', details || 'Unknown upload error');
+        return {
+          ...current,
+          imageUrl: downloadUrl,
+          imageUrlsText: imageUrls.join('\n'),
+        };
+      });
+    } catch (error) {
+      console.error('Image upload failed:', error?.code, error?.message, error?.serverResponse);
+      Alert.alert(
+        'Unable to upload image',
+        getFriendlyErrorMessage(
+          error,
+          'We could not upload that image right now. Please try again or paste an image URL instead.'
+        )
+      );
     } finally {
       setUploadingImage(false);
     }
@@ -144,7 +157,8 @@ export default function AddEditProductScreen() {
       category: product.category || CATEGORIES[0],
       price: String(product.price || ''),
       description: product.description || '',
-      imageUrl: product.imageUrl || '',
+      imageUrl: getPrimaryImageUrl(product),
+      imageUrlsText: normalizeImageUrls(product).join('\n'),
       sizes: Array.isArray(product.sizes) && product.sizes.length ? product.sizes : ['Medium'],
       inStock: product.inStock ?? true,
     });
@@ -162,12 +176,18 @@ export default function AddEditProductScreen() {
     setSaving(true);
 
     try {
+      const imageUrls = normalizeImageUrls({
+        imageUrl: form.imageUrl.trim(),
+        imageUrls: form.imageUrlsText.split('\n'),
+      });
+
       const payload = {
         name: form.name.trim(),
         category: form.category,
         price: Number(form.price),
         description: form.description.trim(),
-        imageUrl: form.imageUrl.trim(),
+        imageUrl: imageUrls[0] || '',
+        imageUrls,
         sizes: form.sizes,
         inStock: form.inStock,
         updatedAt: serverTimestamp(),
@@ -184,7 +204,13 @@ export default function AddEditProductScreen() {
 
       resetForm();
     } catch (error) {
-      Alert.alert('Unable to save product', error.message);
+      Alert.alert(
+        'Unable to save product',
+        getFriendlyErrorMessage(
+          error,
+          'We could not save this product right now. Please try again.'
+        )
+      );
     } finally {
       setSaving(false);
     }
@@ -209,8 +235,8 @@ export default function AddEditProductScreen() {
               onPress={() => handleEdit(product)}
             >
               <View style={styles.productImageWrap}>
-                {product.imageUrl ? (
-                  <Image source={{ uri: product.imageUrl }} style={styles.productImage} />
+                {getPrimaryImageUrl(product) ? (
+                  <Image source={{ uri: getPrimaryImageUrl(product) }} style={styles.productImage} />
                 ) : (
                   <Text style={styles.productEmoji}>🎂</Text>
                 )}
@@ -342,8 +368,31 @@ export default function AddEditProductScreen() {
           onChangeText={value => setForm(current => ({ ...current, imageUrl: value }))}
         />
 
-        {form.imageUrl ? (
-          <Image source={{ uri: form.imageUrl }} style={styles.previewImage} />
+        <TextInput
+          style={[styles.input, styles.multilineInput]}
+          placeholder="Additional image URLs (one per line)"
+          placeholderTextColor="#AAA"
+          autoCapitalize="none"
+          keyboardType="url"
+          multiline
+          numberOfLines={4}
+          value={form.imageUrlsText}
+          onChangeText={value => setForm(current => ({ ...current, imageUrlsText: value }))}
+        />
+
+        {getPrimaryImageUrl({
+          imageUrl: form.imageUrl,
+          imageUrls: form.imageUrlsText.split('\n'),
+        }) ? (
+          <Image
+            source={{
+              uri: getPrimaryImageUrl({
+                imageUrl: form.imageUrl,
+                imageUrls: form.imageUrlsText.split('\n'),
+              }),
+            }}
+            style={styles.previewImage}
+          />
         ) : null}
 
         <TouchableOpacity

@@ -47,8 +47,10 @@ export default function AdminDashboardScreen() {
     [orders]
   );
 
-  const pendingOrders = useMemo(
-    () => orders.filter(order => order.status === 'Pending').length,
+  const activeOrders = useMemo(
+    () =>
+      orders.filter(order => !['Delivered', 'Cancelled'].includes(order.status || 'Pending'))
+        .length,
     [orders]
   );
 
@@ -63,8 +65,8 @@ export default function AdminDashboardScreen() {
           <Text style={styles.metricLabel}>Total orders</Text>
         </View>
         <View style={styles.metricCard}>
-          <Text style={styles.metricValue}>{pendingOrders}</Text>
-          <Text style={styles.metricLabel}>Pending</Text>
+          <Text style={styles.metricValue}>{activeOrders}</Text>
+          <Text style={styles.metricLabel}>Active</Text>
         </View>
       </View>
 

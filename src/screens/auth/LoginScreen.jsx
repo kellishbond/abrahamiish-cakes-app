@@ -5,6 +5,7 @@ import {
   Platform, Alert
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -13,12 +14,23 @@ export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) return Alert.alert('Error', 'Please fill in all fields');
+    if (!email || !password) {
+      return Alert.alert(
+        'Missing details',
+        'Please enter both your email address and password to continue.'
+      );
+    }
     setLoading(true);
     try {
       await login(email, password);
     } catch (error) {
-      Alert.alert('Login Failed', error.message);
+      Alert.alert(
+        'Unable to sign in',
+        getFriendlyErrorMessage(
+          error,
+          'We could not sign you in right now. Please check your details and try again.'
+        )
+      );
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,22 @@ export function CartProvider({ children }) {
     });
   };
 
+  const addItemsToCart = items => {
+    items.forEach(item => {
+      const quantity = Math.max(1, Number(item.quantity || 1));
+      for (let count = 0; count < quantity; count += 1) {
+        addToCart(
+          {
+            ...item,
+            id: item.productId || item.id,
+            price: Number(item.price || 0),
+          },
+          item.size || 'Regular'
+        );
+      }
+    });
+  };
+
   const removeFromCart = (productId, size) => {
     setCartItems(prev => prev.filter(i => !(i.id === productId && i.size === size)));
   };
@@ -39,7 +55,7 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems, addToCart, removeFromCart, updateQuantity, clearCart, total, itemCount
+      cartItems, addToCart, addItemsToCart, removeFromCart, updateQuantity, clearCart, total, itemCount
     }}>
       {children}
     </CartContext.Provider>

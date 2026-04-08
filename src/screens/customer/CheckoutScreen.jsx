@@ -17,18 +17,28 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useCustomer } from '../../context/CustomerContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { COLORS, DELIVERY_FEE, SCREEN_TOP_SPACE } from '../../constants/theme';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const PAYMENT_METHODS = ['Pay on Delivery', 'Bank Transfer'];
+const DELIVERY_SLOTS = ['Morning', 'Afternoon', 'Evening'];
 
 export default function CheckoutScreen({ navigation }) {
   const { user, profile } = useAuth();
+  const {
+    preferredDeliverySlot,
+    preferredPhone,
+    savedAddresses,
+    saveAddress,
+    updateCustomerPreferences,
+  } = useCustomer();
   const { cartItems, clearCart, total } = useCart();
   const [fullName, setFullName] = useState(profile?.name || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(preferredPhone || '');
   const [address, setAddress] = useState('');
   const [deliveryDate, setDeliveryDate] = useState(() => {
     const nextDate = new Date();
@@ -36,6 +46,7 @@ export default function CheckoutScreen({ navigation }) {
     return nextDate;
   });
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
+  const [deliverySlot, setDeliverySlot] = useState(preferredDeliverySlot || DELIVERY_SLOTS[0]);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -62,6 +73,7 @@ export default function CheckoutScreen({ navigation }) {
         phone,
         address,
         deliveryDate: Timestamp.fromDate(deliveryDate),
+        deliverySlot,
         paymentMethod,
         note: note.trim(),
         items: cartItems.map(item => ({
@@ -78,10 +90,25 @@ export default function CheckoutScreen({ navigation }) {
         createdAt: serverTimestamp(),
       });
 
+      await saveAddress({
+        label: fullName.split(' ')[0] || 'Saved address',
+        address,
+      });
+      await updateCustomerPreferences({
+        preferredPhone: phone,
+        preferredDeliverySlot: deliverySlot,
+      });
+
       clearCart();
       navigation.replace('OrderConfirmation', { orderId: orderRef.id });
     } catch (error) {
-      Alert.alert('Order failed', error.message);
+      Alert.alert(
+        'Unable to place order',
+        getFriendlyErrorMessage(
+          error,
+          'We could not place your order right now. Please try again in a moment.'
+        )
+      );
     } finally {
       setSaving(false);
     }
@@ -119,6 +146,26 @@ export default function CheckoutScreen({ navigation }) {
           onChangeText={setAddress}
         />
 
+        {savedAddresses.length > 0 && (
+          <View style={styles.savedAddressesWrap}>
+            <Text style={styles.savedLabel}>Saved addresses</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {savedAddresses.map(item => (
+                <TouchableOpacity
+                  key={`${item.label}-${item.address}`}
+                  style={styles.savedAddressChip}
+                  onPress={() => setAddress(item.address)}
+                >
+                  <Text style={styles.savedAddressLabel}>{item.label}</Text>
+                  <Text style={styles.savedAddressText} numberOfLines={2}>
+                    {item.address}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <TouchableOpacity style={styles.dateField} onPress={() => setShowPicker(true)}>
           <View>
             <Text style={styles.dateLabel}>Delivery date</Text>
@@ -144,6 +191,23 @@ export default function CheckoutScreen({ navigation }) {
             }}
           />
         )}
+
+        <Text style={styles.sectionTitle}>Delivery time slot</Text>
+        <View style={styles.slotRow}>
+          {DELIVERY_SLOTS.map(slot => (
+            <TouchableOpacity
+              key={slot}
+              style={[styles.slotBtn, deliverySlot === slot && styles.slotBtnActive]}
+              onPress={() => setDeliverySlot(slot)}
+            >
+              <Text
+                style={[styles.slotBtnText, deliverySlot === slot && styles.slotBtnTextActive]}
+              >
+                {slot}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -199,6 +263,10 @@ export default function CheckoutScreen({ navigation }) {
             <Text style={styles.summaryAmount}>{formatCurrency(DELIVERY_FEE)}</Text>
           </View>
           <View style={styles.summaryLine}>
+            <Text style={styles.summaryLabel}>Delivery slot</Text>
+            <Text style={styles.summaryAmount}>{deliverySlot}</Text>
+          </View>
+          <View style={styles.summaryLine}>
             <Text style={styles.summaryTotalLabel}>Total</Text>
             <Text style={styles.summaryTotalAmount}>{formatCurrency(grandTotal)}</Text>
           </View>
@@ -247,6 +315,23 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   multilineInput: { minHeight: 88, textAlignVertical: 'top' },
+  savedAddressesWrap: { marginBottom: 12 },
+  savedLabel: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  savedAddressChip: {
+    backgroundColor: '#FFF1EE',
+    borderRadius: 14,
+    marginRight: 10,
+    maxWidth: 210,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  savedAddressLabel: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '700', marginBottom: 4 },
+  savedAddressText: { color: COLORS.textMuted, fontSize: 11, lineHeight: 16 },
   dateField: {
     alignItems: 'center',
     backgroundColor: '#FFF7F5',
@@ -261,6 +346,18 @@ const styles = StyleSheet.create({
   dateLabel: { color: COLORS.textMuted, fontSize: 12, marginBottom: 4 },
   dateValue: { color: COLORS.text, fontSize: 14, fontWeight: '600' },
   dateAction: { color: COLORS.primary, fontSize: 13, fontWeight: '700' },
+  slotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  slotBtn: {
+    backgroundColor: '#FFF7F5',
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  slotBtnActive: { backgroundColor: COLORS.card, borderColor: COLORS.primary },
+  slotBtnText: { color: COLORS.textMuted, fontSize: 13, fontWeight: '700' },
+  slotBtnTextActive: { color: COLORS.primaryDark },
   radioRow: { alignItems: 'center', flexDirection: 'row', marginBottom: 14 },
   radioOuter: {
     alignItems: 'center',

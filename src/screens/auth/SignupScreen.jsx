@@ -5,6 +5,7 @@ import {
   Platform, Alert, ScrollView
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { getFriendlyErrorMessage } from '../../utils/errorMessages';
 
 export default function SignupScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -14,13 +15,29 @@ export default function SignupScreen({ navigation }) {
   const { signup } = useAuth();
 
   const handleSignup = async () => {
-    if (!name || !email || !password) return Alert.alert('Error', 'Please fill in all fields');
-    if (password.length < 6) return Alert.alert('Error', 'Password must be at least 6 characters');
+    if (!name || !email || !password) {
+      return Alert.alert(
+        'Missing details',
+        'Please fill in your full name, email address, and password to create your account.'
+      );
+    }
+    if (password.length < 6) {
+      return Alert.alert(
+        'Password too short',
+        'Please use a password with at least 6 characters.'
+      );
+    }
     setLoading(true);
     try {
       await signup(name, email, password);
     } catch (error) {
-      Alert.alert('Signup Failed', error.message);
+      Alert.alert(
+        'Unable to create account',
+        getFriendlyErrorMessage(
+          error,
+          'We could not create your account right now. Please try again.'
+        )
+      );
     } finally {
       setLoading(false);
     }

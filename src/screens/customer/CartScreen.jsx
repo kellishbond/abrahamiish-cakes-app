@@ -14,6 +14,7 @@ import {
   SCREEN_TOP_SPACE,
   SHADOW,
 } from '../../constants/theme';
+import { getPrimaryImageUrl } from '../../utils/productImages';
 import { formatCurrency } from '../../utils/formatters';
 
 export default function CartScreen({ navigation }) {
@@ -64,8 +65,8 @@ export default function CartScreen({ navigation }) {
           {cartItems.map(item => (
             <View key={`${item.id}-${item.size}`} style={styles.card}>
               <View style={styles.imageWrap}>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.image} />
+                {getPrimaryImageUrl(item) ? (
+                  <Image source={{ uri: getPrimaryImageUrl(item) }} style={styles.image} />
                 ) : (
                   <Text style={styles.imageEmoji}>🎂</Text>
                 )}
