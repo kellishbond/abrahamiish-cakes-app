@@ -274,32 +274,35 @@ export default function HomeScreen({ navigation }) {
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoriesContainer}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        {CATEGORIES.map(category => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryBtn,
-              activeCategory === category && styles.categoryBtnActive,
-            ]}
-            onPress={() => setActiveCategory(category)}
-          >
-            <Text
+      <View style={styles.categoriesRail}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesContainer}
+          contentContainerStyle={styles.categoriesContent}
+        >
+          {CATEGORIES.map(category => (
+            <TouchableOpacity
+              key={category}
               style={[
-                styles.categoryText,
-                activeCategory === category && styles.categoryTextActive,
+                styles.categoryBtn,
+                activeCategory === category && styles.categoryBtnActive,
               ]}
+              onPress={() => setActiveCategory(category)}
             >
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.categoryText,
+                  activeCategory === category && styles.categoryTextActive,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {loading ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
@@ -370,11 +373,17 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { color: COLORS.text, flex: 1, fontSize: 14, paddingVertical: 13 },
-  categoriesContainer: { marginBottom: 16, maxHeight: 54 },
+  categoriesRail: {
+    height: 58,
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  categoriesContainer: { flexGrow: 0 },
   categoriesContent: {
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 2,
+    paddingRight: 10,
+    paddingVertical: 4,
   },
   categoryBtn: {
     alignItems: 'center',
@@ -382,6 +391,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 999,
     borderWidth: 1,
+    flexShrink: 0,
     height: 46,
     justifyContent: 'center',
     marginRight: 10,
@@ -392,7 +402,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  categoryText: { color: COLORS.textMuted, fontSize: 13, fontWeight: '600' },
+  categoryText: { color: COLORS.textMuted, fontSize: 13, fontWeight: '600', lineHeight: 16 },
   categoryTextActive: { color: COLORS.surface },
   loader: { marginTop: 48 },
   productList: { paddingBottom: 20 },

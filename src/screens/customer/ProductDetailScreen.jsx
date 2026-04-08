@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  Modal,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,6 +20,7 @@ export default function ProductDetailScreen({ route, navigation }) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || 'Regular');
   const [quantity, setQuantity] = useState(1);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
   const totalPrice = useMemo(
     () => Number(product.price || 0) * quantity,
@@ -44,15 +47,51 @@ export default function ProductDetailScreen({ route, navigation }) {
 
       <View style={styles.imageArea}>
         {product.imageUrl ? (
-          <Image source={{ uri: product.imageUrl }} style={styles.heroImage} />
+          <TouchableOpacity
+            activeOpacity={0.96}
+            onPress={() => setIsImageViewerOpen(true)}
+            style={styles.heroImageButton}
+          >
+            <Image source={{ uri: product.imageUrl }} style={styles.heroImage} />
+            <View style={styles.zoomHint}>
+              <Text style={styles.zoomHintText}>Tap image to view</Text>
+            </View>
+          </TouchableOpacity>
         ) : (
-          <Text style={styles.emoji}>🎂</Text>
+          <Text style={styles.emoji}>Cake</Text>
         )}
 
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isImageViewerOpen}
+        onRequestClose={() => setIsImageViewerOpen(false)}
+      >
+        <View style={styles.viewerOverlay}>
+          <Pressable
+            style={styles.viewerBackdrop}
+            onPress={() => setIsImageViewerOpen(false)}
+          />
+          <TouchableOpacity
+            style={styles.viewerCloseBtn}
+            onPress={() => setIsImageViewerOpen(false)}
+          >
+            <Text style={styles.viewerCloseText}>Close</Text>
+          </TouchableOpacity>
+          <View style={styles.viewerImageWrap}>
+            <Image
+              resizeMode="contain"
+              source={{ uri: product.imageUrl }}
+              style={styles.viewerImage}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView style={styles.details} showsVerticalScrollIndicator={false}>
         <View style={styles.tag}>
@@ -136,7 +175,7 @@ export default function ProductDetailScreen({ route, navigation }) {
           onPress={handleAddToCart}
           disabled={!product.inStock}
         >
-          <Text style={styles.addBtnText}>Add to Cart 🛒</Text>
+          <Text style={styles.addBtnText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -151,8 +190,22 @@ const styles = StyleSheet.create({
     height: 290,
     justifyContent: 'center',
   },
+  heroImageButton: {
+    height: '100%',
+    width: '100%',
+  },
   heroImage: { height: '100%', width: '100%' },
-  emoji: { fontSize: 96 },
+  emoji: { fontSize: 48, fontWeight: '700' },
+  zoomHint: {
+    backgroundColor: 'rgba(26, 26, 26, 0.66)',
+    borderRadius: 999,
+    bottom: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    position: 'absolute',
+    right: 18,
+  },
+  zoomHintText: { color: COLORS.surface, fontSize: 12, fontWeight: '700' },
   backBtn: {
     alignItems: 'center',
     backgroundColor: COLORS.surface,
@@ -166,6 +219,40 @@ const styles = StyleSheet.create({
     ...SHADOW,
   },
   backText: { color: COLORS.text, fontSize: 20, fontWeight: '700' },
+  viewerOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(10, 10, 10, 0.94)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: SCREEN_TOP_SPACE,
+  },
+  viewerBackdrop: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  viewerCloseBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    marginBottom: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  viewerCloseText: { color: COLORS.surface, fontSize: 13, fontWeight: '700' },
+  viewerImageWrap: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  viewerImage: {
+    height: '100%',
+    width: '100%',
+  },
   details: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   tag: {
     alignSelf: 'flex-start',

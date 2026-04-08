@@ -74,7 +74,9 @@ export default function CartScreen({ navigation }) {
               <View style={styles.itemBody}>
                 <View style={styles.itemTopRow}>
                   <View style={styles.itemMeta}>
-                    <Text style={styles.itemName}>{item.name}</Text>
+                    <Text style={styles.itemName} numberOfLines={2}>
+                      {item.name}
+                    </Text>
                     <View style={styles.metaPills}>
                       <View style={styles.metaPill}>
                         <Text style={styles.metaPillText}>{item.size}</Text>
@@ -172,26 +174,34 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 22,
     flexDirection: 'row',
+    minHeight: 152,
     overflow: 'hidden',
     ...SHADOW,
   },
   imageWrap: {
     alignItems: 'center',
     backgroundColor: COLORS.card,
+    height: 152,
     justifyContent: 'center',
-    minHeight: 134,
     width: 108,
   },
   image: { height: '100%', width: '100%' },
   imageEmoji: { fontSize: 42 },
-  itemBody: { flex: 1, justifyContent: 'space-between', padding: 14 },
+  itemBody: { flex: 1, justifyContent: 'space-between', minHeight: 152, padding: 14 },
   itemTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    minHeight: 78,
   },
   itemMeta: { flex: 1, paddingRight: 10 },
-  itemName: { color: COLORS.text, fontSize: 17, fontWeight: '800', marginBottom: 10 },
+  itemName: {
+    color: COLORS.text,
+    fontSize: 17,
+    fontWeight: '800',
+    lineHeight: 22,
+    marginBottom: 10,
+    minHeight: 44,
+  },
   metaPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metaPill: {
     backgroundColor: COLORS.card,

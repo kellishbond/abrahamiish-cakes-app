@@ -14,11 +14,28 @@ import { useAuth } from '../../context/AuthContext';
 import { COLORS, SCREEN_TOP_SPACE, SHADOW } from '../../constants/theme';
 import { formatCurrency, formatDate, getInitials } from '../../utils/formatters';
 
+const ORDERS_PER_PAGE = 5;
+
+function formatNameFromEmail(email = '') {
+  const base = email.split('@')[0];
+
+  if (!base) {
+    return 'Customer';
+  }
+
+  return base
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export default function ProfileScreen({ route }) {
   const adminMode = route?.params?.adminMode;
   const { logout, profile, role, user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!user?.uid || adminMode) {
@@ -52,7 +69,14 @@ export default function ProfileScreen({ route }) {
     return unsubscribe;
   }, [adminMode, user?.uid]);
 
-  const profileName = profile?.name || user?.displayName || 'Abrahamiish Customer';
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [orders.length, adminMode]);
+
+  const profileName =
+    profile?.name?.trim() ||
+    user?.displayName?.trim() ||
+    formatNameFromEmail(profile?.email || user?.email || '');
   const profileEmail = profile?.email || user?.email || 'No email';
   const pendingOrders = useMemo(
     () => orders.filter(order => order.status === 'Pending').length,
@@ -62,6 +86,11 @@ export default function ProfileScreen({ route }) {
     () => orders.filter(order => order.status === 'Delivered').length,
     [orders]
   );
+  const totalPages = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ORDERS_PER_PAGE;
+    return orders.slice(startIndex, startIndex + ORDERS_PER_PAGE);
+  }, [currentPage, orders]);
 
   const handleLogout = async () => {
     try {
@@ -77,11 +106,13 @@ export default function ProfileScreen({ route }) {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{getInitials(profileName)}</Text>
         </View>
-        <Text style={styles.name}>{profileName}</Text>
+        <Text style={styles.name}>
+          {adminMode ? 'Abrahamiish Admin' : 'Abrahamiish Customer'}
+        </Text>
         <Text style={styles.email}>{profileEmail}</Text>
         <View style={styles.rolePill}>
           <Text style={styles.rolePillText}>
-            {adminMode ? 'Admin Settings' : `${role || 'customer'} account`}
+            {adminMode ? 'Admin Settings' : profileName}
           </Text>
         </View>
       </View>
@@ -121,7 +152,8 @@ export default function ProfileScreen({ route }) {
                 </Text>
               </View>
             ) : (
-              orders.map(order => (
+              <>
+                {paginatedOrders.map(order => (
                 <View key={order.id} style={styles.orderCard}>
                   <View style={styles.orderTopRow}>
                     <View style={styles.orderMeta}>
@@ -144,7 +176,54 @@ export default function ProfileScreen({ route }) {
                     <Text style={styles.orderTotal}>{formatCurrency(order.total)}</Text>
                   </View>
                 </View>
-              ))
+                ))}
+
+                {totalPages > 1 && (
+                  <View style={styles.paginationRow}>
+                    <TouchableOpacity
+                      disabled={currentPage === 1}
+                      onPress={() => setCurrentPage(page => Math.max(1, page - 1))}
+                      style={[
+                        styles.paginationBtn,
+                        currentPage === 1 && styles.paginationBtnDisabled,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.paginationBtnText,
+                          currentPage === 1 && styles.paginationBtnTextDisabled,
+                        ]}
+                      >
+                        Previous
+                      </Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.paginationText}>
+                      Page {currentPage} of {totalPages}
+                    </Text>
+
+                    <TouchableOpacity
+                      disabled={currentPage === totalPages}
+                      onPress={() =>
+                        setCurrentPage(page => Math.min(totalPages, page + 1))
+                      }
+                      style={[
+                        styles.paginationBtn,
+                        currentPage === totalPages && styles.paginationBtnDisabled,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.paginationBtnText,
+                          currentPage === totalPages && styles.paginationBtnTextDisabled,
+                        ]}
+                      >
+                        Next
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
           </View>
         </>
@@ -284,6 +363,26 @@ const styles = StyleSheet.create({
   },
   orderFooterLabel: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
   orderTotal: { color: COLORS.primary, fontSize: 16, fontWeight: '800' },
+  paginationRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  paginationBtn: {
+    alignItems: 'center',
+    backgroundColor: '#FFF1EE',
+    borderRadius: 999,
+    minWidth: 88,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  paginationBtnDisabled: {
+    backgroundColor: '#F7F2F0',
+  },
+  paginationBtnText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '800' },
+  paginationBtnTextDisabled: { color: COLORS.textMuted },
+  paginationText: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
   logoutBtn: {
     alignItems: 'center',
     backgroundColor: COLORS.text,
